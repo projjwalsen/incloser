@@ -11,6 +11,7 @@ import {
   Keyboard,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -33,6 +34,7 @@ export default function PhoneScreen() {
   const { phone, countryCode, setPhone, setCountryCode } = useOnboardingStore();
   const [isLoading, setIsLoading] = useState(false);
   const [hasInteracted, setHasInteracted] = useState(false);
+  const [isPhoneFocused, setIsPhoneFocused] = useState(false);
 
   // Validate phone number (India: 10 digits)
   const isValidPhone = (phoneNumber: string): boolean => {
@@ -96,6 +98,15 @@ export default function PhoneScreen() {
             ]}
             keyboardShouldPersistTaps="handled"
           >
+            {/* Square Logo */}
+            <View style={styles.logoContainer}>
+              <Image
+                source={require("../../../assets/images/logo_square.png")}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+
             {/* Card Container */}
             <View style={styles.card}>
               {/* Title */}
@@ -107,8 +118,17 @@ export default function PhoneScreen() {
                   selectedCode={countryCode}
                   onSelect={setCountryCode}
                 />
-                <View style={styles.phoneInputContainer}>
-                  <Text style={styles.phoneIcon}>📱</Text>
+                <View
+                  style={[
+                    styles.phoneInputContainer,
+                    isPhoneFocused && styles.phoneInputContainerFocused,
+                  ]}
+                >
+                  <Image
+                    source={require("../../../assets/images/phone_icon.png")}
+                    style={styles.phoneIcon}
+                    resizeMode="contain"
+                  />
                   <TextInput
                     ref={phoneInputRef}
                     style={styles.phoneInput}
@@ -116,6 +136,8 @@ export default function PhoneScreen() {
                     placeholderTextColor={colors.input.placeholder}
                     value={phone}
                     onChangeText={handlePhoneChange}
+                    onFocus={() => setIsPhoneFocused(true)}
+                    onBlur={() => setIsPhoneFocused(false)}
                     keyboardType="phone-pad"
                     maxLength={countryCode === "+91" ? 10 : 15}
                     autoFocus={false}
@@ -139,8 +161,10 @@ export default function PhoneScreen() {
                   <Text style={styles.linkText}>Privacy Policy</Text>
                 </Text>
               </View>
+            </View>
 
-              {/* Get OTP Button */}
+            {/* Get OTP Button - Outside Card */}
+            <View style={styles.buttonContainer}>
               <Pressable
                 onPress={handleGetOtp}
                 disabled={!isButtonEnabled}
@@ -181,6 +205,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
   },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 24,
+  },
+  logo: {
+    width: 194,
+    height: 237,
+  },
   card: {
     backgroundColor: colors.background.card,
     borderRadius: 24,
@@ -193,11 +225,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
+    marginBottom: 40,
   },
   title: {
-    ...typography.display.small,
-    fontSize: 24,
-    lineHeight: 32,
+    ...typography.tagline,
     color: colors.text.primary,
     textAlign: "center",
     marginBottom: 32,
@@ -218,8 +249,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 14,
   },
+  phoneInputContainerFocused: {
+    borderColor: colors.button.primary,
+  },
   phoneIcon: {
-    fontSize: 20,
+    width: 20,
+    height: 20,
     marginRight: 8,
   },
   phoneInput: {
@@ -237,7 +272,10 @@ const styles = StyleSheet.create({
   },
   termsContainer: {
     marginTop: 16,
-    marginBottom: 24,
+  },
+  buttonContainer: {
+    paddingHorizontal: 0,
+    marginTop: 8,
   },
   termsText: {
     ...typography.body.small,

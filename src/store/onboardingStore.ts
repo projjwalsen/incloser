@@ -37,7 +37,6 @@ interface OnboardingState {
 
   /* =========================
      FEMALE EXTRA PROFILE FIELDS
-     (Safe to keep for all, even if male doesn’t use them)
      ========================= */
   dob: Dob; // dd/mm/yyyy
   city: string;
@@ -54,6 +53,16 @@ interface OnboardingState {
      ========================= */
   audioVerificationUri: string | null;
   audioVerificationDurationSec: number;
+
+  /* =========================
+     COMPLETION FLAGS
+     TODO: Replace with backend session/auth state
+     When implementing real auth:
+     - Remove this local flag
+     - Use JWT/session to determine onboarding status
+     - Check user.onboardingCompleted from API
+     ========================= */
+  maleOnboardingCompleted: boolean;
 
   /* =========================
      ACTIONS
@@ -77,10 +86,9 @@ interface OnboardingState {
   toggleSecondaryLanguage: (lang: Exclude<Language, null>) => void;
   clearSecondaryLanguages: () => void;
 
-  setAudioVerification: (payload: {
-    uri: string | null;
-    durationSec?: number;
-  }) => void;
+  setAudioVerification: (payload: { uri: string | null; durationSec?: number }) => void;
+
+  setMaleOnboardingCompleted: (done: boolean) => void;
 
   reset: () => void;
 }
@@ -111,6 +119,9 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
   /* AUDIO VERIFICATION */
   audioVerificationUri: null,
   audioVerificationDurationSec: 0,
+
+  /* COMPLETION FLAGS */
+  maleOnboardingCompleted: false,
 
   /* ACTIONS */
   setPhone: (phone) => set({ phone }),
@@ -154,6 +165,9 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
           : state.audioVerificationDurationSec,
     })),
 
+  setMaleOnboardingCompleted: (maleOnboardingCompleted) =>
+    set({ maleOnboardingCompleted }),
+
   reset: () =>
     set({
       phone: "",
@@ -174,5 +188,7 @@ export const useOnboardingStore = create<OnboardingState>((set, get) => ({
 
       audioVerificationUri: null,
       audioVerificationDurationSec: 0,
+
+      maleOnboardingCompleted: false,
     }),
 }));
