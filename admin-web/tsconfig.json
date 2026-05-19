@@ -26,8 +26,12 @@
     "paths": {
       "@/*": [
         "./*"
+      ],
+      "@incloser/shared-types": [
+        "../shared-types/src/index.ts"
       ]
-    }
+    },
+    "types": ["node"]
   },
   "include": [
     "next-env.d.ts",

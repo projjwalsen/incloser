@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postinstall": "node -e \"require('fs').accessSync(require('path').join(__dirname,'../shared-types/src/index.ts'))\"",
     "start": "next start",
     "lint": "eslint"
   },
