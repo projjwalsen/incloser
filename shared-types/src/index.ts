@@ -82,6 +82,9 @@ export type FemaleModelDetail = FemaleModelSummary & {
   languages: string[];
   onboardingDetails: Record<string, unknown>;
   internalNotes: string | null;
+  /** Browser-playable URL for onboarding audio sample; null if none uploaded. */
+  audioVerificationPlaybackUrl: string | null;
+  audioVerificationDurationSec: number | null;
 };
 
 export type PaginatedResult<T> = {
@@ -196,6 +199,23 @@ export type FinanceRevenuePayload = {
  * Admin settings document returned by GET/PATCH `/api/admin/settings`.
  * Field names align with the admin-backend settings service.
  */
+/** Per-minute INR rates and model payout share (admin + mobile billing). */
+export type BillingSettings = {
+  textRateInrPerMin: number;
+  voiceRateInrPerMin: number;
+  videoRateInrPerMin: number;
+  modelSharePercent: number;
+  reserveMinutes: number;
+  disconnectMinutes: number;
+};
+
+export type WalletTopupPackage = {
+  id: string;
+  title: string;
+  amountInr: number;
+  bonusInr: number;
+};
+
 export type AppSettings = {
   tokenPricingInr: number;
   defaultCallPricingTokens: number;
@@ -205,6 +225,7 @@ export type AppSettings = {
   featureToggles: Record<string, boolean>;
   /** Free-form; admin-web maps to support email + phone lines */
   supportContactInfo: string;
+  billing: BillingSettings;
 };
 
 export type AuditLogItem = {

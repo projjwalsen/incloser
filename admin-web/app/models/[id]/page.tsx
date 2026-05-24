@@ -132,6 +132,7 @@ export default function ModelDetailPage() {
 
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
   const [audioItem, setAudioItem] = useState<AudioQueueItem | null>(null);
+  const [profilePlaybackUrl, setProfilePlaybackUrl] = useState<string | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [audioAction, setAudioAction] = useState<{ message: string; tone: "success" | "warning" | "danger" } | null>(null);
@@ -148,6 +149,7 @@ export default function ModelDetailPage() {
       }
       const p = await fetchModelById(id);
       const withdrawals = await fetchWithdrawals();
+      setProfilePlaybackUrl(p.audioVerificationPlaybackUrl ?? null);
       setModel(buildModelDetail(p, withdrawals));
     } catch (e) {
       if (!silent) {
@@ -173,7 +175,23 @@ export default function ModelDetailPage() {
       if (!silent) setAudioLoading(true);
       setAudioError(null);
       const queue = await fetchAudioQueue();
-      const hit = queue.find((q) => q.modelId === id) ?? null;
+      let hit = queue.find((q) => q.modelId === id) ?? null;
+      if (!hit?.audioUrl) {
+        const p = await fetchModelById(id);
+        if (p.audioVerificationPlaybackUrl) {
+          hit = {
+            id: hit?.id ?? "",
+            modelId: id,
+            nickname: p.nickname,
+            avatarImageUrl: p.avatarImageUrl,
+            submittedAt: hit?.submittedAt ?? "—",
+            duration: hit?.duration ?? "—",
+            status: hit?.status ?? "pending",
+            note: hit?.note ?? "",
+            audioUrl: p.audioVerificationPlaybackUrl,
+          };
+        }
+      }
       setAudioItem(hit);
     } catch (e) {
       setAudioError(e instanceof Error ? e.message : "Failed to load audio queue");
@@ -182,6 +200,12 @@ export default function ModelDetailPage() {
       if (!silent) setAudioLoading(false);
     }
   }, [id]);
+
+  const playbackUrl = audioItem?.audioUrl ?? profilePlaybackUrl;
+
+  const audioActionsEnabled = Boolean(
+    audioItem?.id && playbackUrl && !audioItem.id.startsWith("av_fp_"),
+  );
 
   useEffect(() => {
     if (activeTab !== "audio") return;
@@ -570,15 +594,15 @@ export default function ModelDetailPage() {
 
                   {audioError ? <p className="mt-3 text-sm font-semibold text-[var(--status-danger-text)]">{audioError}</p> : null}
 
-                  {audioItem?.audioUrl ? (
+                  {playbackUrl ? (
                     <div className="mt-5 rounded-[18px] border border-dashed border-[#c9d8ff] bg-gradient-to-br from-white to-[#f4f7ff] p-4">
-                      <audio className="w-full" controls src={audioItem.audioUrl} preload="metadata">
+                      <audio className="w-full" controls src={playbackUrl} preload="metadata">
                         <track kind="captions" />
                       </audio>
                       <p className="mt-3 text-xs font-semibold text-[var(--text-muted)]">Browser preview</p>
                     </div>
-                  ) : !audioLoading && !audioItem ? (
-                    <p className="mt-4 text-sm text-[var(--text-muted)]">Open the verification audio queue to process items when they appear here.</p>
+                  ) : !audioLoading && !playbackUrl ? (
+                    <p className="mt-4 text-sm text-[var(--text-muted)]">No recorded audio on file for this model yet.</p>
                   ) : null}
                 </div>
 
@@ -589,7 +613,7 @@ export default function ModelDetailPage() {
                     <PrimaryButton
                       type="button"
                       className="flex-1"
-                      disabled={!audioItem}
+                      disabled={!audioActionsEnabled}
                       onClick={() => audioItem && setVerifyIntent({ kind: "audio", action: "approve", queueItemId: audioItem.id })}
                     >
                       Approve
@@ -597,7 +621,7 @@ export default function ModelDetailPage() {
                     <SecondaryButton
                       type="button"
                       className="flex-1"
-                      disabled={!audioItem}
+                      disabled={!audioActionsEnabled}
                       onClick={() => audioItem && setVerifyIntent({ kind: "audio", action: "reject", queueItemId: audioItem.id })}
                     >
                       Reject
@@ -605,7 +629,7 @@ export default function ModelDetailPage() {
                     <SecondaryButton
                       type="button"
                       className="flex-1"
-                      disabled={!audioItem}
+                      disabled={!audioActionsEnabled}
                       onClick={() => audioItem && setVerifyIntent({ kind: "audio", action: "resubmit", queueItemId: audioItem.id })}
                     >
                       Resubmit
@@ -624,7 +648,13 @@ export default function ModelDetailPage() {
                       {audioAction.message}
                     </p>
                   ) : (
-                    <p className="text-xs text-[var(--text-muted)]">Actions apply to the pending queue row for this model, when present.</p>
+                    <p className="text-xs text-[var(--text-muted)]">
+                      {audioActionsEnabled
+                        ? "Actions apply to the pending queue row for this model."
+                        : playbackUrl
+                          ? "Playback is available from the profile. Reload after running supabase/audio_verifications.sql if approve/reject stays disabled."
+                          : "Actions apply when a pending queue row exists for this model."}
+                    </p>
                   )}
                 </div>
               </div>

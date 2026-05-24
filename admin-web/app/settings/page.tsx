@@ -25,6 +25,10 @@ type SettingsState = {
   toggles: FeatureToggles;
   supportEmail: string;
   supportPhone: string;
+  textRateInr: string;
+  voiceRateInr: string;
+  videoRateInr: string;
+  modelSharePercent: string;
 };
 
 const initialSettings: SettingsState = {
@@ -41,6 +45,10 @@ const initialSettings: SettingsState = {
   },
   supportEmail: "support@incloser.app",
   supportPhone: "+91 80000 00000",
+  textRateInr: "2",
+  voiceRateInr: "5",
+  videoRateInr: "10",
+  modelSharePercent: "85",
 };
 
 function apiToState(api: AppSettings): SettingsState {
@@ -60,6 +68,10 @@ function apiToState(api: AppSettings): SettingsState {
     },
     supportEmail: lines[0] ?? "",
     supportPhone: lines.slice(1).join(" ").trim() || "",
+    textRateInr: String(api.billing?.textRateInrPerMin ?? 2),
+    voiceRateInr: String(api.billing?.voiceRateInrPerMin ?? 5),
+    videoRateInr: String(api.billing?.videoRateInrPerMin ?? 10),
+    modelSharePercent: String(api.billing?.modelSharePercent ?? 85),
   };
 }
 
@@ -81,6 +93,14 @@ function stateToPayload(s: SettingsState): AppSettings {
     languageMasterList,
     featureToggles: { ...s.toggles },
     supportContactInfo: supportContactInfo || "support@incloser.app",
+    billing: {
+      textRateInrPerMin: Number.parseFloat(s.textRateInr) || 2,
+      voiceRateInrPerMin: Number.parseFloat(s.voiceRateInr) || 5,
+      videoRateInrPerMin: Number.parseFloat(s.videoRateInr) || 10,
+      modelSharePercent: Number.parseFloat(s.modelSharePercent) || 85,
+      reserveMinutes: 3,
+      disconnectMinutes: 1,
+    },
   };
 }
 
@@ -278,6 +298,57 @@ export default function SettingsPage() {
                   onChange={(e) => setSettings((s) => ({ ...s, tokenPriceInr: e.target.value }))}
                 />
                 <p className="mt-1 text-xs text-[var(--text-muted)]">Example: 1.00 means ₹1 buys 1 token.</p>
+              </div>
+            </div>
+          </CardShell>
+
+          <CardShell className="xl:col-span-2">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-heading-2 text-[var(--text-primary)]">Per-minute rates (INR)</h2>
+                <p className="text-body-sm text-[var(--text-muted)]">
+                  Charged to male users at the start of each minute. Models receive {settings.modelSharePercent}% of
+                  full minutes on session end.
+                </p>
+              </div>
+              <StatusBadge label="Wallet billing" variant="info" />
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Text chat (₹/min)</label>
+                <input
+                  className="soft-input"
+                  inputMode="decimal"
+                  value={settings.textRateInr}
+                  onChange={(e) => setSettings((s) => ({ ...s, textRateInr: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Voice call (₹/min)</label>
+                <input
+                  className="soft-input"
+                  inputMode="decimal"
+                  value={settings.voiceRateInr}
+                  onChange={(e) => setSettings((s) => ({ ...s, voiceRateInr: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Video call (₹/min)</label>
+                <input
+                  className="soft-input"
+                  inputMode="decimal"
+                  value={settings.videoRateInr}
+                  onChange={(e) => setSettings((s) => ({ ...s, videoRateInr: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-[var(--text-secondary)]">Model share (%)</label>
+                <input
+                  className="soft-input"
+                  inputMode="decimal"
+                  value={settings.modelSharePercent}
+                  onChange={(e) => setSettings((s) => ({ ...s, modelSharePercent: e.target.value }))}
+                />
               </div>
             </div>
           </CardShell>

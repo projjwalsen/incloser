@@ -7,8 +7,9 @@ import { fail, ok } from "../utils/http.js";
 type RequestWithAdmin = Request & { admin?: AdminUser };
 
 export const settingsController = {
-  get(_req: Request, res: Response) {
-    return ok(res, settingsService.get());
+  async get(_req: Request, res: Response) {
+    const data = await settingsService.get();
+    return ok(res, data);
   },
 
   async patch(req: Request, res: Response) {
@@ -17,7 +18,7 @@ export const settingsController = {
     const body = req.body as Record<string, unknown> | null | undefined;
     if (!body || typeof body !== "object") return fail(res, "JSON body is required", 400);
     try {
-      const next = settingsService.patch(body);
+      const next = await settingsService.patch(body);
       await createAuditLog({
         adminId: admin.id,
         action: "UPDATE_SETTINGS",

@@ -75,6 +75,81 @@ function featureUnavailable(entity: string, error: PostgrestError | null): Error
   return new Error(`${entity} is not available in this database (${pgErrorText(error)}).`);
 }
 
+type ProfileAudioBackfill = {
+  id: string;
+  nickname?: string | null;
+  avatar_id?: string | null;
+  audio_verification_url: string | null;
+  audio_verification_duration_sec: number | null;
+  updated_at: string | null;
+  created_at: string | null;
+};
+
+/** Creates pending queue rows for profiles that uploaded audio but have no audio_verifications row yet. */
+async function ensurePendingAudioVerificationRows(supabase: ReturnType<typeof getSupabaseAdminClient>): Promise<void> {
+  const { data: profiles, error: profError } = await supabase
+    .from("female_profiles")
+    .select("id,audio_verification_url,audio_verification_duration_sec,updated_at,created_at")
+    .not("audio_verification_url", "is", null);
+  if (profError) {
+    if (isMissingRelationError(profError)) return;
+    throw new Error(`Audio backfill profile query failed: ${pgErrorText(profError)}`);
+  }
+
+  for (const row of (profiles ?? []) as ProfileAudioBackfill[]) {
+    const url = row.audio_verification_url?.trim();
+    if (!url) continue;
+
+    const { data: existing, error: avError } = await supabase
+      .from("audio_verifications")
+      .select("id,status")
+      .eq("model_id", row.id)
+      .order("updated_at", { ascending: false, nullsFirst: false })
+      .limit(1);
+    if (avError) {
+      if (isMissingRelationError(avError)) return;
+      throw new Error(`Audio backfill lookup failed: ${pgErrorText(avError)}`);
+    }
+
+    const latest = (existing?.[0] as { status?: string } | undefined)?.status;
+    if (latest === "pending" || latest === "approved") continue;
+
+    const { error: insError } = await supabase.from("audio_verifications").insert({
+      model_id: row.id,
+      audio_url: url,
+      duration_seconds: row.audio_verification_duration_sec ?? 0,
+      status: "pending",
+      submitted_at: row.updated_at ?? row.created_at ?? new Date().toISOString(),
+    });
+    if (insError) {
+      if (isMissingRelationError(insError)) return;
+      console.warn(`[verification] audio backfill insert for ${row.id}:`, pgErrorText(insError));
+    }
+  }
+}
+
+function audioQueueFromProfiles(
+  supabase: ReturnType<typeof getSupabaseAdminClient>,
+  profiles: ProfileAudioBackfill[],
+): AudioQueueItem[] {
+  return profiles
+    .filter((row) => row.audio_verification_url?.trim())
+    .map((row) => {
+      const rawUrl = row.audio_verification_url!.trim();
+      return {
+        id: `av_fp_${row.id}`,
+        modelId: row.id,
+        nickname: row.nickname ?? "Unknown",
+        avatarImageUrl: resolveFemaleAvatarImageUrl(row.avatar_id),
+        submittedAt: formatSubmittedAt(row.updated_at ?? row.created_at),
+        duration: durationLabel(row.audio_verification_duration_sec),
+        status: "pending" as const,
+        note: "",
+        audioUrl: resolveAudioPlaybackUrl(supabase, rawUrl),
+      };
+    });
+}
+
 export const verificationService = {
   async profileQueue(): Promise<ProfileQueueItem[]> {
     const supabase = getSupabaseAdminClient();
@@ -119,6 +194,8 @@ export const verificationService = {
 
   async audioQueue(): Promise<AudioQueueItem[]> {
     const supabase = getSupabaseAdminClient();
+    await ensurePendingAudioVerificationRows(supabase);
+
     const { data, error } = await supabase
       .from("audio_verifications")
       .select("id,model_id,status,note,submitted_at,updated_at,created_at,audio_url,duration_seconds")
@@ -127,7 +204,18 @@ export const verificationService = {
     if (error) {
       if (isMissingRelationError(error)) {
         console.warn("[verification] audioQueue: audio_verifications not deployed:", pgErrorText(error));
-        return [];
+        const { data: profiles, error: profError } = await supabase
+          .from("female_profiles")
+          .select(
+            "id,nickname,avatar_id,audio_verification_url,audio_verification_duration_sec,updated_at,created_at",
+          )
+          .not("audio_verification_url", "is", null)
+          .order("updated_at", { ascending: false, nullsFirst: false });
+        if (profError) {
+          console.warn("[verification] audioQueue profile fallback failed:", pgErrorText(profError));
+          return [];
+        }
+        return audioQueueFromProfiles(supabase, (profiles ?? []) as ProfileAudioBackfill[]);
       }
       throw new Error(`Audio verification queue query failed: ${pgErrorText(error)}`);
     }
@@ -187,6 +275,9 @@ export const verificationService = {
 
   async approveAudio(id: string): Promise<void> {
     const supabase = getSupabaseAdminClient();
+    if (id.startsWith("av_fp_")) {
+      throw new Error("Run supabase/audio_verifications.sql in Supabase, then reload the audio queue.");
+    }
     const { error } = await supabase.from("audio_verifications").update({ status: "approved" }).eq("id", id);
     if (error) {
       if (isMissingRelationError(error)) throw featureUnavailable("Audio verification", error);
@@ -197,6 +288,9 @@ export const verificationService = {
 
   async rejectAudio(id: string): Promise<void> {
     const supabase = getSupabaseAdminClient();
+    if (id.startsWith("av_fp_")) {
+      throw new Error("Run supabase/audio_verifications.sql in Supabase, then reload the audio queue.");
+    }
     const { error } = await supabase.from("audio_verifications").update({ status: "rejected" }).eq("id", id);
     if (error) {
       if (isMissingRelationError(error)) throw featureUnavailable("Audio verification", error);
@@ -207,6 +301,9 @@ export const verificationService = {
 
   async resubmitAudio(id: string): Promise<void> {
     const supabase = getSupabaseAdminClient();
+    if (id.startsWith("av_fp_")) {
+      throw new Error("Run supabase/audio_verifications.sql in Supabase, then reload the audio queue.");
+    }
     const { error } = await supabase.from("audio_verifications").update({ status: "pending" }).eq("id", id);
     if (error) {
       if (isMissingRelationError(error)) throw featureUnavailable("Audio verification", error);

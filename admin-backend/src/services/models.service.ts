@@ -1,5 +1,7 @@
 import type { FemaleModelDetail, FemaleModelSummary, PaginatedResult } from "@incloser/shared-types";
+import { resolveAudioPlaybackUrl } from "../lib/audioPlaybackUrl.js";
 import { resolveFemaleAvatarImageUrl } from "../lib/femaleAvatarImageUrl.js";
+import { isMissingRelationError } from "../lib/supabase-errors.js";
 import { getSupabaseAdminClient } from "../lib/supabase.js";
 import { syncModelUserAccountFromFemaleProfileId } from "./model-account-sync.service.js";
 
@@ -70,14 +72,48 @@ function normalizeVerification(status: string | null | undefined): FemaleModelSu
   return "pending";
 }
 
-/** No `audio_verification_status` on female_profiles yet — infer a coarse UI state from audio fields. */
-function inferAudioVerificationStatus(row: ModelRecord): FemaleModelSummary["audioVerificationStatus"] {
-  if (row.audio_verification_url?.trim()) return "review";
+function audioVerificationStatusFromLatest(
+  latestDbStatus: string | null | undefined,
+  hasAudioUrl: boolean,
+): FemaleModelSummary["audioVerificationStatus"] {
+  if (latestDbStatus === "approved") return "approved";
+  if (latestDbStatus === "rejected") return "rejected";
+  if (latestDbStatus === "pending") return "review";
+  if (hasAudioUrl) return "review";
   return "pending";
 }
 
-function toSummary(row: ModelRecord): FemaleModelSummary {
+async function latestAudioStatusByModelId(
+  supabase: ReturnType<typeof getSupabaseAdminClient>,
+  modelIds: string[],
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  if (modelIds.length === 0) return map;
+
+  const { data, error } = await supabase
+    .from("audio_verifications")
+    .select("model_id,status,updated_at")
+    .in("model_id", modelIds)
+    .order("updated_at", { ascending: false, nullsFirst: false });
+
+  if (error) {
+    if (isMissingRelationError(error)) return map;
+    throw new Error(`Audio status lookup failed: ${error.message}`);
+  }
+
+  for (const row of data ?? []) {
+    const modelId = String((row as { model_id: string }).model_id);
+    if (map.has(modelId)) continue;
+    const status = (row as { status?: string }).status;
+    if (status) map.set(modelId, status);
+  }
+  return map;
+}
+
+function toSummary(row: ModelRecord, latestAudioByModelId?: Map<string, string>): FemaleModelSummary {
   const primaryLanguage = row.primary_language ?? null;
+  const hasAudioUrl = Boolean(row.audio_verification_url?.trim());
+  const latestAudio = latestAudioByModelId?.get(row.id);
   return {
     id: row.id,
     nickname: row.nickname ?? "Unknown",
@@ -87,19 +123,26 @@ function toSummary(row: ModelRecord): FemaleModelSummary {
     primaryLanguage,
     secondaryLanguages: parseSecondaryLanguages(row.secondary_languages, primaryLanguage),
     verificationStatus: normalizeVerification(row.verification_status),
-    audioVerificationStatus: inferAudioVerificationStatus(row),
+    audioVerificationStatus: audioVerificationStatusFromLatest(latestAudio, hasAudioUrl),
     createdAt: row.created_at ?? new Date(0).toISOString(),
     avatarImageUrl: resolveFemaleAvatarImageUrl(row.avatar_id),
     accountActivated: accountActivatedFromRow(row),
   };
 }
 
-function toDetail(row: ModelRecord): FemaleModelDetail {
-  const summary = toSummary(row);
+function toDetail(
+  row: ModelRecord,
+  supabase?: ReturnType<typeof getSupabaseAdminClient>,
+  latestAudioByModelId?: Map<string, string>,
+): FemaleModelDetail {
+  const summary = toSummary(row, latestAudioByModelId);
   const languages = [
     ...(summary.primaryLanguage ? [summary.primaryLanguage] : []),
     ...summary.secondaryLanguages,
   ];
+  const rawAudio = row.audio_verification_url?.trim() || null;
+  const audioVerificationPlaybackUrl =
+    supabase && rawAudio ? resolveAudioPlaybackUrl(supabase, rawAudio) : rawAudio;
   return {
     ...summary,
     userId: row.user_id,
@@ -107,6 +150,8 @@ function toDetail(row: ModelRecord): FemaleModelDetail {
     languages,
     onboardingDetails: {},
     internalNotes: null,
+    audioVerificationPlaybackUrl,
+    audioVerificationDurationSec: row.audio_verification_duration_sec ?? null,
   };
 }
 
@@ -137,7 +182,12 @@ export const modelsService = {
 
     const { data, count, error } = await query;
     if (error) throw new Error(`Models query failed: ${error.message}`);
-    const items = ((data ?? []) as ModelRecord[]).map(toSummary);
+    const rows = (data ?? []) as ModelRecord[];
+    const audioByModelId = await latestAudioStatusByModelId(
+      supabase,
+      rows.map((r) => r.id),
+    );
+    const items = rows.map((r) => toSummary(r, audioByModelId));
     const total = count ?? 0;
     return {
       items,
@@ -157,7 +207,8 @@ export const modelsService = {
       .maybeSingle<ModelRecord>();
     if (error) throw new Error(`Model detail query failed: ${error.message}`);
     if (!data) return null;
-    return toDetail(data);
+    const audioByModelId = await latestAudioStatusByModelId(supabase, [id]);
+    return toDetail(data, supabase, audioByModelId);
   },
 
   async updateStatus(id: string, status: FemaleModelSummary["verificationStatus"]): Promise<FemaleModelDetail | null> {
@@ -177,7 +228,8 @@ export const modelsService = {
       .select(MODEL_COLUMNS)
       .eq("id", id)
       .maybeSingle<ModelRecord>();
-    if (refreshError || !refreshed) return toDetail(data);
-    return toDetail(refreshed);
+    const audioByModelId = await latestAudioStatusByModelId(supabase, [id]);
+    if (refreshError || !refreshed) return toDetail(data, supabase, audioByModelId);
+    return toDetail(refreshed, supabase, audioByModelId);
   },
 };

@@ -31,7 +31,9 @@
         "../shared-types/src/index.ts"
       ]
     },
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
   "include": [
     "next-env.d.ts",
@@ -41,6 +43,14 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    ".next/dev",
+    ".next/cache",
+    "../node_modules",
+    "../admin-backend",
+    "../src"
   ]
 }
