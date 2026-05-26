@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -17,6 +18,7 @@ import { typography } from "../../theme/typography";
 import { useOnboardingStore, type Language } from "../../store/onboardingStore";
 import GradientBackground from "../../components/GradientBackground";
 import { LANGUAGES, type LanguageOption } from "../../constants/languages";
+import { completeMaleRegistration } from "../../services/registration/completeMaleRegistration";
 
 type Nav = NativeStackNavigationProp<AuthStackParamList, "SelectLanguage">;
 
@@ -24,8 +26,17 @@ export default function SelectLanguageScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
 
-  const { language, gender, setLanguage, setMaleOnboardingCompleted } =
-    useOnboardingStore();
+  const {
+    language,
+    gender,
+    phone,
+    countryCode,
+    nickname,
+    avatarId,
+    isAdultConfirmed,
+    setLanguage,
+    setMaleOnboardingCompleted,
+  } = useOnboardingStore();
 
   const [selectedLanguage, setSelectedLanguage] = useState<Language>(language);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,30 +51,35 @@ export default function SelectLanguageScreen() {
     setIsLoading(true);
     setLanguage(selectedLanguage);
 
-    // Simulate processing delay (keep for now; later replace with API call)
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    // Navigate based on gender
     if (gender === "female") {
+      await new Promise((resolve) => setTimeout(resolve, 300));
       navigation.navigate("SelectSecondaryLanguage");
-    } else {
-      // Male onboarding complete
-      // TODO: Replace with backend signup/session API call
-      // When implementing real auth:
-      // - Call POST /api/auth/signup with all profile data
-      // - Get JWT token and store securely
-      // - Backend marks user.onboardingCompleted = true
-      // - Remove local flag, use session/token instead
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      await completeMaleRegistration({
+        phone,
+        countryCode,
+        gender,
+        nickname,
+        avatarId,
+        isAdultConfirmed,
+        language: selectedLanguage,
+      });
       setMaleOnboardingCompleted(true);
 
-      // Reset navigation stack to prevent going back to onboarding
       navigation.reset({
         index: 0,
         routes: [{ name: "MaleHome" }],
       });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Registration failed.";
+      Alert.alert("Registration failed", message);
+    } finally {
+      setIsLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const isButtonEnabled = selectedLanguage !== null && !isLoading;
