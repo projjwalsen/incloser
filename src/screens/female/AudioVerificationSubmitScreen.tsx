@@ -17,6 +17,8 @@ import { colors } from "../../theme/colors";
 import { typography } from "../../theme/typography";
 import GradientBackground from "../../components/GradientBackground";
 import { Audio } from "expo-av";
+import { useOnboardingStore } from "../../store/onboardingStore";
+import { completeFemaleRegistration } from "../../services/registration/completeFemaleRegistration";
 
 type AudioVerificationSubmitRouteProp = RouteProp<
   AuthStackParamList,
@@ -30,6 +32,20 @@ export default function AudioVerificationSubmitScreen() {
   const insets = useSafeAreaInsets();
 
   const { audioUri, durationSec } = route.params;
+
+  const {
+    phone,
+    countryCode,
+    gender,
+    nickname,
+    avatarId,
+    dob,
+    city,
+    state,
+    language,
+    secondaryLanguages,
+    isAdultConfirmed,
+  } = useOnboardingStore();
 
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -132,7 +148,6 @@ export default function AudioVerificationSubmitScreen() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
 
-    // Stop playback if playing
     if (sound && isPlaying) {
       try {
         await sound.pauseAsync();
@@ -142,23 +157,41 @@ export default function AudioVerificationSubmitScreen() {
       }
     }
 
-    // Simulate API submission delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      await completeFemaleRegistration({
+        phone,
+        countryCode,
+        gender,
+        nickname,
+        avatarId,
+        dob,
+        city,
+        state,
+        language,
+        secondaryLanguages,
+        isAdultConfirmed,
+        audioVerificationUri: audioUri,
+        audioVerificationDurationSec: durationSec,
+      });
 
-    Alert.alert(
-      "Success!",
-      "Your audio verification has been submitted successfully.",
-      [
-        {
-          text: "OK",
-          onPress: () => {
-            navigation.navigate("NextStepPlaceholder");
+      Alert.alert(
+        "Submitted!",
+        "Your profile and audio sample have been submitted for verification.",
+        [
+          {
+            text: "OK",
+            onPress: () => {
+              navigation.navigate("NextStepPlaceholder");
+            },
           },
-        },
-      ]
-    );
-
-    setIsSubmitting(false);
+        ],
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Submission failed.";
+      Alert.alert("Submission failed", message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const formatTime = (seconds: number) => {
