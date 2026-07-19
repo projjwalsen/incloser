@@ -9,8 +9,19 @@ import { requireAgencyAuth } from "../../middleware/agencyAuth.js";
 export const agencyAuthRoutes = Router();
 agencyAuthRoutes.post("/agency-auth/login", agencyAuthController.login);
 
-/** Agency self-service portal — mount with requireAgencyAuth before admin requireAuth. */
+/**
+ * Agency self-service portal.
+ * Auth is attached per-route (not router.use) so mounting this router
+ * does not intercept unrelated admin paths like /agencies.
+ */
 export const agencyPortalRoutes = Router();
-agencyPortalRoutes.use(requireAgencyAuth);
-agencyPortalRoutes.get("/agency-portal/dashboard", agencyPortalController.dashboard);
-agencyPortalRoutes.post("/agency-portal/withdrawals", agencyPortalController.requestWithdrawal);
+agencyPortalRoutes.get(
+  "/agency-portal/dashboard",
+  requireAgencyAuth,
+  agencyPortalController.dashboard
+);
+agencyPortalRoutes.post(
+  "/agency-portal/withdrawals",
+  requireAgencyAuth,
+  agencyPortalController.requestWithdrawal
+);
