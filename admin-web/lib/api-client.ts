@@ -137,6 +137,33 @@ export async function reconfirmAdminPassword(password: string): Promise<void> {
   }
 }
 
+export async function adminPost<T>(path: string, body: unknown = {}): Promise<T> {
+  const token = getAuthToken();
+  let response: Response;
+  try {
+    response = await fetch(`${getBaseUrl()}${path}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+  } catch (e) {
+    mapFetchNetworkError(e);
+  }
+
+  const json = (await response.json()) as Partial<AdminApiEnvelope<T>> & { message?: string };
+  if (!response.ok) {
+    throw new Error(json.message ?? `Request failed with status ${response.status}`);
+  }
+  if (!json.data) {
+    throw new Error("Malformed API response: missing data");
+  }
+  return json.data;
+}
+
 export async function adminPatch<T>(path: string, body: unknown): Promise<T> {
   const token = getAuthToken();
   let response: Response;

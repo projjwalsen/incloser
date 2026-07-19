@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { authController } from "../controllers/auth.controller.js";
 import { requireAuth } from "../middleware/auth.js";
+import { agenciesRoutes } from "./modules/agencies.routes.js";
+import { agencyAuthRoutes, agencyPortalRoutes } from "./modules/agencyPortal.routes.js";
 import { auditLogsRoutes } from "./modules/audit-logs.routes.js";
 import { authRoutes } from "./modules/auth.routes.js";
 import { cmsRoutes } from "./modules/cms.routes.js";
@@ -15,10 +16,12 @@ import { withdrawalsRoutes } from "./modules/withdrawals.routes.js";
 
 export const adminRouter = Router();
 
-// Public admin auth endpoints
+// Public admin + agency auth endpoints
 adminRouter.use(authRoutes);
+adminRouter.use(agencyAuthRoutes);
+adminRouter.use(agencyPortalRoutes);
 
-// Everything else requires JWT (starter scaffold)
+// Everything else requires admin JWT
 adminRouter.use(requireAuth);
 adminRouter.get("/", (_req, res) => {
   res.json({
@@ -28,18 +31,24 @@ adminRouter.get("/", (_req, res) => {
     routes: [
       "/auth/login",
       "/auth/reconfirm",
+      "/agency-auth/login",
+      "/agency-portal/dashboard",
       "/dashboard/summary",
       "/users",
       "/models",
       "/verification/profile",
       "/verification/audio",
       "/withdrawals",
+      "/agencies",
+      "/agencies/withdrawals",
       "/finance/wallets",
       "/finance/revenue",
       "/cms/banners",
       "/cms/faq",
       "/cms/policies",
       "/cms/avatars",
+      "/cms/female-tutorials",
+      "/cms/notice-board",
       "/settings",
       "/audit-logs",
       "/integrations/supabase/ping",
@@ -51,6 +60,7 @@ adminRouter.use(usersRoutes);
 adminRouter.use(modelsRoutes);
 adminRouter.use(verificationRoutes);
 adminRouter.use(withdrawalsRoutes);
+adminRouter.use(agenciesRoutes);
 adminRouter.use(financeRoutes);
 adminRouter.use(cmsRoutes);
 adminRouter.use(settingsRoutes);

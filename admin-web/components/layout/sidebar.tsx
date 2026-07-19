@@ -15,12 +15,14 @@ import {
   LineChart,
   LogOut,
   Mic2,
+  IndianRupee,
   ScrollText,
   Settings,
   ShieldCheck,
   Sparkles,
   Users,
   Wallet,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { clearAdminAuth } from "@/lib/api-client";
@@ -76,6 +78,7 @@ const navStructure: (NavSingle | NavGroup)[] = [
     label: "Finance",
     icon: Landmark,
     items: [
+      { href: "/finance/unit-prices", label: "Unit prices", icon: IndianRupee },
       { href: "/finance/wallets", label: "Wallet", icon: Landmark },
       { href: "/finance/revenue", label: "Revenue", icon: LineChart },
     ],
@@ -83,11 +86,24 @@ const navStructure: (NavSingle | NavGroup)[] = [
   { kind: "link", href: "/withdrawals", label: "Withdrawal", icon: Wallet },
   {
     kind: "group",
+    id: "agencies",
+    label: "Agencies",
+    icon: Building2,
+    items: [
+      { href: "/agencies", label: "All agencies", icon: Building2 },
+      { href: "/agencies/withdrawals", label: "Agency payouts", icon: Wallet },
+      { href: "/agencies/settings", label: "Agency settings", icon: Settings },
+    ],
+  },
+  {
+    kind: "group",
     id: "cms",
     label: "CMS",
     icon: Images,
     items: [
       { href: "/cms/banners", label: "Banner", icon: Images },
+      { href: "/cms/female-tutorials", label: "Model videos", icon: Images },
+      { href: "/cms/notice-board", label: "Notice board", icon: Images },
       { href: "/cms/avatars", label: "Avatars", icon: CircleUserRound },
       { href: "/cms/faq", label: "FAQ", icon: HelpCircle },
       { href: "/cms/policies", label: "Policies", icon: ScrollText },

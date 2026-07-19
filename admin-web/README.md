@@ -57,6 +57,8 @@ Next.js App Router admin dashboard for internal CMS operations.
 - `/finance/wallets`
 - `/finance/revenue`
 - `/cms/banners`
+- `/cms/female-tutorials`
+- `/cms/notice-board`
 - `/cms/faq`
 - `/cms/policies`
 - `/settings`
