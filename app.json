@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "incloser",
+    "name": "InCloser",
     "slug": "incloser",
+    "scheme": "incloser",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,21 +14,77 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.projjwal09.incloser",
+      "buildNumber": "6",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to use the camera for video calls.",
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone for voice and video calls.",
+        "NSPhotoLibraryUsageDescription": "Allow $(PRODUCT_NAME) to access photos for profile pictures.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.projjwal09.incloser",
+      "versionCode": 7,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundImage": "./assets/adaptive-icon-background.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.BLUETOOTH",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.WAKE_LOCK",
+        "android.permission.VIBRATE"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-font"
-    ]
+      "expo-font",
+      "expo-secure-store",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow InCloser to access the camera for video calls.",
+          "microphonePermission": "Allow InCloser to access the microphone for voice and video calls.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0"
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "supabaseUrl": "",
+      "supabaseAnonKey": "",
+      "eas": {
+        "projectId": "7313ebe5-e180-4a4d-9b2b-d6bcd60b890c"
+      }
+    },
+    "owner": "projjwal09",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/7313ebe5-e180-4a4d-9b2b-d6bcd60b890c"
+    }
   }
 }
