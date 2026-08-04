@@ -9,12 +9,14 @@ create table if not exists public.admin_users (
   password_hash text not null,
   full_name text not null default '',
   role text not null default 'super_admin',
+  username text,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint admin_users_role_allowed check (
     role in (
       'super_admin',
+      'operations_admin',
       'moderator',
       'verification_admin',
       'finance_admin',

@@ -1,10 +1,23 @@
 /** Roles assignable to admin users and JWT `role` claim */
 export type AdminRole =
   | "super_admin"
+  | "operations_admin"
   | "moderator"
   | "verification_admin"
   | "finance_admin"
   | "support_admin";
+
+/** CMS admin account (no password in API responses). */
+export type AdminUserAccount = {
+  id: string;
+  username: string;
+  email: string;
+  fullName: string;
+  role: AdminRole;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
 
 /** Standard API envelope for admin JSON responses */
 export type ApiResponse<T> = {
@@ -155,6 +168,15 @@ export type CmsNoticeBoardItem = {
   sortOrder: number;
   isActive: boolean;
   createdAt: string;
+  updatedAt: string;
+};
+
+/** Language-wise speak-out text for model audio verification */
+export type CmsAudioVerificationScript = {
+  languageCode: string;
+  languageLabel: string;
+  scriptText: string;
+  isActive: boolean;
   updatedAt: string;
 };
 

@@ -1,5 +1,13 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
+import {
+  ADMIN_USER_MANAGER_ROLES,
+  AGENCY_MANAGER_ROLES,
+  MODELS_READ_ROLES,
+  VERIFICATION_ROLES,
+} from "../lib/adminRoles.js";
+import { requireRole } from "../middleware/requireRole.js";
+import { adminUsersRoutes } from "./modules/adminUsers.routes.js";
 import { agenciesRoutes } from "./modules/agencies.routes.js";
 import { agencyAuthRoutes, agencyPortalRoutes } from "./modules/agencyPortal.routes.js";
 import { auditLogsRoutes } from "./modules/audit-logs.routes.js";
@@ -21,8 +29,9 @@ adminRouter.use(authRoutes);
 adminRouter.use(agencyAuthRoutes);
 adminRouter.use(agencyPortalRoutes);
 
-// Everything else requires admin JWT
+// Everything below requires admin JWT
 adminRouter.use(requireAuth);
+
 adminRouter.get("/", (_req, res) => {
   res.json({
     ok: true,
@@ -30,7 +39,9 @@ adminRouter.get("/", (_req, res) => {
     scope: "admin",
     routes: [
       "/auth/login",
+      "/auth/me",
       "/auth/reconfirm",
+      "/admin-users",
       "/agency-auth/login",
       "/agency-portal/dashboard",
       "/dashboard/summary",
@@ -49,20 +60,23 @@ adminRouter.get("/", (_req, res) => {
       "/cms/avatars",
       "/cms/female-tutorials",
       "/cms/notice-board",
+      "/cms/audio-verification-scripts",
       "/settings",
       "/audit-logs",
       "/integrations/supabase/ping",
     ],
   });
 });
+
 adminRouter.use(dashboardRoutes);
-adminRouter.use(usersRoutes);
-adminRouter.use(modelsRoutes);
-adminRouter.use(verificationRoutes);
-adminRouter.use(withdrawalsRoutes);
-adminRouter.use(agenciesRoutes);
-adminRouter.use(financeRoutes);
-adminRouter.use(cmsRoutes);
-adminRouter.use(settingsRoutes);
-adminRouter.use(auditLogsRoutes);
-adminRouter.use(systemRoutes);
+adminRouter.use(requireRole("super_admin", "moderator", "finance_admin", "support_admin"), usersRoutes);
+adminRouter.use(requireRole(...MODELS_READ_ROLES), modelsRoutes);
+adminRouter.use(requireRole(...VERIFICATION_ROLES), verificationRoutes);
+adminRouter.use(requireRole("super_admin", "finance_admin"), withdrawalsRoutes);
+adminRouter.use(requireRole(...AGENCY_MANAGER_ROLES), agenciesRoutes);
+adminRouter.use(requireRole("super_admin", "finance_admin"), financeRoutes);
+adminRouter.use(requireRole("super_admin", "moderator"), cmsRoutes);
+adminRouter.use(requireRole("super_admin"), settingsRoutes);
+adminRouter.use(requireRole("super_admin"), auditLogsRoutes);
+adminRouter.use(requireRole("super_admin"), systemRoutes);
+adminRouter.use(requireRole(...ADMIN_USER_MANAGER_ROLES), adminUsersRoutes);
