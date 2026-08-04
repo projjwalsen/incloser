@@ -89,11 +89,15 @@ export default function TeamSettingsPage() {
 
   return (
     <AdminShell>
-      <PageContainer
-        title="Team accounts"
-        subtitle="Create staff logins for agency management and model verification."
-        actions={
-          <div className="flex gap-2">
+      <PageContainer>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h1 className="text-heading-1 text-[var(--text-primary)]">Team accounts</h1>
+            <p className="mt-1 text-body-sm text-[var(--text-muted)]">
+              Create staff logins for agency management and model verification.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
             <SecondaryButton onClick={() => void load()} disabled={loading}>
               <RefreshCw className="size-4" />
               Refresh
@@ -103,8 +107,8 @@ export default function TeamSettingsPage() {
               Add team member
             </PrimaryButton>
           </div>
-        }
-      >
+        </div>
+
         {error ? (
           <div className="mb-4 rounded-[16px] border border-[#f1c2c9] bg-[var(--status-danger-bg)] px-4 py-3 text-sm font-semibold text-[var(--status-danger-text)]">
             {error}
@@ -143,19 +147,18 @@ export default function TeamSettingsPage() {
                     <td className="px-4 py-3 font-medium text-[var(--text-primary)]">{row.username}</td>
                     <td className="px-4 py-3 text-[var(--text-secondary)]">{row.fullName || "—"}</td>
                     <td className="px-4 py-3">
-                      <StatusBadge tone="info">{roleLabel(row.role)}</StatusBadge>
+                      <StatusBadge label={roleLabel(row.role)} variant="info" />
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge tone={row.isActive ? "success" : "danger"}>
-                        {row.isActive ? "Active" : "Disabled"}
-                      </StatusBadge>
+                      <StatusBadge
+                        label={row.isActive ? "Active" : "Disabled"}
+                        variant={row.isActive ? "success" : "danger"}
+                      />
                     </td>
                     <td className="px-4 py-3">
-                      {row.role !== "super_admin" ? (
-                        <SecondaryButton onClick={() => void toggleActive(row)}>
-                          {row.isActive ? "Disable" : "Enable"}
-                        </SecondaryButton>
-                      ) : null}
+                      <SecondaryButton onClick={() => void toggleActive(row)}>
+                        {row.isActive ? "Disable" : "Enable"}
+                      </SecondaryButton>
                     </td>
                   </tr>
                 ))}
